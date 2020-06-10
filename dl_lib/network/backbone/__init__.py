@@ -2,4 +2,4 @@
 # -*- coding:utf-8 -*-
 
 from .backbone import Backbone
-from .resnet_backbone import ResnetBackbone
+from .resnet_backbone import ResNet

@@ -1,6 +1,6 @@
 from dl_lib.network.backbone import Backbone
 from dl_lib.layers import ShapeSpec
-from dl_lib.network import ResnetBackbone
+from dl_lib.network import ResNet
 from dl_lib.network import SequentialUpsample
 from dl_lib.network import CenterNetDetectionHead
 from dl_lib.network import CenterNet
@@ -16,7 +16,7 @@ def build_backbone(cfg, input_shape=None):
     if input_shape is None:
         input_shape = ShapeSpec(channels=len(cfg.MODEL.PIXEL_MEAN))
 
-    backbone = ResnetBackbone(cfg, input_shape)
+    backbone = ResNet(cfg, input_shape)
     assert isinstance(backbone, Backbone)
     return backbone
 

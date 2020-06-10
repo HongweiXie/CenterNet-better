@@ -13,7 +13,7 @@ _resnet_mapper = {
 }
 
 
-class ResnetBackbone(Backbone):
+class ResNet(Backbone):
 
     def __init__(self, cfg, input_shape=None, pretrained=True):
         super().__init__()
