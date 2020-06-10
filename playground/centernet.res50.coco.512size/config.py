@@ -64,10 +64,10 @@ _config_dict = dict(
             MAX_ITER=126000,
             WARMUP_ITERS=1000,
         ),
-        IMS_PER_BATCH=128,
+        IMS_PER_BATCH=16,
     ),
     OUTPUT_DIR=osp.join(
-        '/data/Outputs/model_logs/playground',
+        '/data/shuofan/tmp/playground',
         osp.split(osp.realpath(__file__))[0].split("playground/")[-1]
     ),
     GLOBAL=dict(DUMP_TEST=False),

@@ -21,13 +21,13 @@ class SingleHead(nn.Module):
         return x
 
 
-class CenternetHead(nn.Module):
+class CenterNetDetectionHead(nn.Module):
     """
     The head used in CenterNet for object classification and box regression.
     It has three subnet, with a common structure but separate parameters.
     """
     def __init__(self, cfg):
-        super(CenternetHead, self).__init__()
+        super(CenterNetDetectionHead, self).__init__()
         self.cls_head = SingleHead(
             64,
             cfg.MODEL.CENTERNET.NUM_CLASSES,

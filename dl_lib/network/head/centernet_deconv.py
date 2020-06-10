@@ -61,35 +61,48 @@ class DeconvLayer(nn.Module):
             w[c, 0, :, :] = w[0, 0, :, :]
 
 
-class CenternetDeconv(nn.Module):
+class SequentialUpsample(nn.Module):
     """
     The head used in CenterNet for object classification and box regression.
     It has three subnet, with a common structure but separate parameters.
     """
     def __init__(self, cfg):
-        super(CenternetDeconv, self).__init__()
+        super(SequentialUpsample, self).__init__()
         # modify into config
         channels = cfg.MODEL.CENTERNET.DECONV_CHANNEL
         deconv_kernel = cfg.MODEL.CENTERNET.DECONV_KERNEL
         modulate_deform = cfg.MODEL.CENTERNET.MODULATE_DEFORM
-        self.deconv1 = DeconvLayer(
-            channels[0], channels[1],
-            deconv_kernel=deconv_kernel[0],
-            modulate_deform=modulate_deform,
-        )
-        self.deconv2 = DeconvLayer(
-            channels[1], channels[2],
-            deconv_kernel=deconv_kernel[1],
-            modulate_deform=modulate_deform,
-        )
-        self.deconv3 = DeconvLayer(
-            channels[2], channels[3],
-            deconv_kernel=deconv_kernel[2],
-            modulate_deform=modulate_deform,
-        )
+        in_channel = channels[0]
+        self.deconvs = nn.ModuleList()
+        for c, k in zip(channels[1:], deconv_kernel):
+            self.deconvs.append(
+                DeconvLayer(
+                    in_channel, c,
+                    deconv_kernel=k,
+                    modulate_deform=modulate_deform,
+                )
+            )
+            in_channel = c
+        # self.deconv1 = DeconvLayer(
+        #     channels[0], channels[1],
+        #     deconv_kernel=deconv_kernel[0],
+        #     modulate_deform=modulate_deform,
+        # )
+        # self.deconv2 = DeconvLayer(
+        #     channels[1], channels[2],
+        #     deconv_kernel=deconv_kernel[1],
+        #     modulate_deform=modulate_deform,
+        # )
+        # self.deconv3 = DeconvLayer(
+        #     channels[2], channels[3],
+        #     deconv_kernel=deconv_kernel[2],
+        #     modulate_deform=modulate_deform,
+        # )
 
     def forward(self, x):
-        x = self.deconv1(x)
-        x = self.deconv2(x)
-        x = self.deconv3(x)
+        # x = self.deconv1(x)
+        # x = self.deconv2(x)
+        # x = self.deconv3(x)
+        for layer in self.deconvs:
+            x = layer(x)
         return x

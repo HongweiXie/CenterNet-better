@@ -1,8 +1,8 @@
 from dl_lib.network.backbone import Backbone
 from dl_lib.layers import ShapeSpec
 from dl_lib.network import ResnetBackbone
-from dl_lib.network import CenternetDeconv
-from dl_lib.network import CenternetHead
+from dl_lib.network import SequentialUpsample
+from dl_lib.network import CenterNetDetectionHead
 from dl_lib.network import CenterNet
 
 
@@ -22,12 +22,12 @@ def build_backbone(cfg, input_shape=None):
 
 
 def build_upsample_layers(cfg, ):
-    upsample = CenternetDeconv(cfg)
+    upsample = SequentialUpsample(cfg)
     return upsample
 
 
 def build_head(cfg, ):
-    head = CenternetHead(cfg)
+    head = CenterNetDetectionHead(cfg)
     return head
 
 

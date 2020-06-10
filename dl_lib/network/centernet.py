@@ -30,8 +30,8 @@ class CenterNet(nn.Module):
         self.backbone = cfg.build_backbone(
             cfg, input_shape=ShapeSpec(channels=len(cfg.MODEL.PIXEL_MEAN))
         )
-        self.upsample = cfg.build_upsample_layers(cfg)
-        self.head = cfg.build_head(cfg)
+        self.neck = cfg.build_upsample_layers(cfg)
+        self.bbox_head = cfg.build_head(cfg)
         # self.cls_head = cfg.build_cls_head(cfg)
         # self.wh_head = cfg.build_width_height_head(cfg)
         # self.reg_head = cfg.build_center_reg_head(cfg)
@@ -68,8 +68,8 @@ class CenterNet(nn.Module):
             return self.inference(images)
 
         features = self.backbone(images.tensor)
-        up_fmap = self.upsample(features)
-        pred_dict = self.head(up_fmap)
+        up_fmap = self.neck(features)
+        pred_dict = self.bbox_head(up_fmap)
 
         gt_dict = self.get_ground_truth(batched_inputs)
 
@@ -150,8 +150,8 @@ class CenterNet(nn.Module):
         aligned_img[..., pad_h:h + pad_h, pad_w:w + pad_w] = images.tensor
 
         features = self.backbone(aligned_img)
-        up_fmap = self.upsample(features)
-        pred_dict = self.head(up_fmap)
+        up_fmap = self.neck(features)
+        pred_dict = self.bbox_head(up_fmap)
         results = self.decode_prediction(pred_dict, img_info)
 
         ori_w, ori_h = img_info['center'] * 2
