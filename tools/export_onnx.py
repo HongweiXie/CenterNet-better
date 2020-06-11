@@ -15,21 +15,21 @@ Therefore, we recommend you to use dl_lib as an library and take
 this file as an example of how to use the library.
 You may want to write your own script with your datasets and other customizations.
 """
-import random
-import numpy as np
-import torch
+import glob
+import logging
 import os
+import re
 import sys
+import torch
 sys.path.insert(0, '.')  # noqa: E402
-
-from colorama import Fore, Style
+from collections import OrderedDict
 
 import dl_lib.utils.comm as comm
 from config import config
 from dl_lib.checkpoint import DetectionCheckpointer
 from dl_lib.data import MetadataCatalog
 from dl_lib.engine import (DefaultTrainer, default_argument_parser,
-                           default_setup, hooks, launch)
+                           default_setup, launch)
 from dl_lib.evaluation import (COCOEvaluator, DatasetEvaluators,
                                PascalVOCDetectionEvaluator, verify_results)
 from net import build_model
@@ -60,9 +60,10 @@ class Trainer(DefaultTrainer):
             evaluator_list.append(
                 COCOEvaluator(
                     dataset_name, cfg, True,
-                    output_folder, dump=cfg.GLOBAL.DUMP_TRAIN
+                    output_folder, dump=cfg.GLOBAL.DUMP_TEST
                 ))
-        elif evaluator_type == "pascal_voc":
+
+        if evaluator_type == "pascal_voc":
             return PascalVOCDetectionEvaluator(dataset_name)
 
         if len(evaluator_list) == 0:
@@ -71,58 +72,74 @@ class Trainer(DefaultTrainer):
                     dataset_name, evaluator_type
                 )
             )
-        elif len(evaluator_list) == 1:
+        if len(evaluator_list) == 1:
             return evaluator_list[0]
         return DatasetEvaluators(evaluator_list)
 
-def set_random_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-def main(args):
-    # set_random_seed(317)
-    config.merge_from_list(args.opts)
-    cfg, logger = default_setup(config, args)
-    model = build_model(cfg)
-    logger.info(f"Model structure: {model}")
-    file_sys = os.statvfs(cfg.OUTPUT_DIR)
-    free_space_Gb = (file_sys.f_bfree * file_sys.f_frsize) / 2**30
-    # We assume that a single dumped model is 700Mb
-    eval_space_Gb = (cfg.SOLVER.LR_SCHEDULER.MAX_ITER // cfg.SOLVER.CHECKPOINT_PERIOD) * 700 / 2**10
-    if eval_space_Gb > free_space_Gb:
-        logger.warning(f"{Fore.RED}Remaining space({free_space_Gb}GB) "
-                       f"is less than ({eval_space_Gb}GB){Style.RESET_ALL}")
-    if args.eval_only:
-        DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
-            cfg.MODEL.WEIGHTS, resume=args.resume
-        )
-        res = Trainer.test(cfg, model)
-        if comm.is_main_process():
-            verify_results(cfg, res)
-        if cfg.TEST.AUG.ENABLED:
-            res.update(Trainer.test_with_TTA(cfg, model))
+    @classmethod
+    def test_with_TTA(cls, cfg, model):
+        logger = logging.getLogger("dl_lib.trainer")
+        # In the end of training, run an evaluation with TTA
+        # Only support some R-CNN models.
+        logger.info("Running inference with test-time augmentation ...")
+        from dl_lib.modeling import GeneralizedRCNNWithTTA
+        model = GeneralizedRCNNWithTTA(cfg, model)
+        evaluators = [
+            cls.build_evaluator(
+                cfg, name, output_folder=os.path.join(cfg.OUTPUT_DIR, "inference_TTA")
+            )
+            for name in cfg.DATASETS.TEST
+        ]
+        res = cls.test(cfg, model, evaluators)
+        res = OrderedDict({k + "_TTA": v for k, v in res.items()})
         return res
 
-    """
-    If you'd like to do anything fancier than the standard training logic,
-    consider writing your own training loop or subclassing the trainer.
-    """
-    trainer = Trainer(cfg, model)
-    trainer.resume_or_load(resume=args.resume)
-    if cfg.TEST.AUG.ENABLED:
-        trainer.register_hooks(
-            [hooks.EvalHook(0, lambda: trainer.test_with_TTA(cfg, trainer.model))]
-        )
 
-    return trainer.train()
+def test_argument_parser():
+    parser = default_argument_parser()
+    parser.add_argument("--checkpoint", type=str, default="", help="start iter used to test")
+    parser.add_argument("--debug", action="store_true", help="use debug mode or not")
+    return parser
+
+
+def main(args):
+    config.merge_from_list(args.opts)
+    cfg, logger = default_setup(config, args)
+    if args.debug:
+        batches = int(cfg.SOLVER.IMS_PER_BATCH / 8 * args.num_gpus)
+        if cfg.SOLVER.IMS_PER_BATCH != batches:
+            cfg.SOLVER.IMS_PER_BATCH = batches
+            logger.warning("SOLVER.IMS_PER_BATCH is changed to {}".format(batches))
+
+    cfg.MODEL.WEIGHTS = args.checkpoint
+    model = build_model(cfg)
+
+    DetectionCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
+        cfg.MODEL.WEIGHTS, resume=args.resume
+    )
+
+    x = torch.randn(1, 3, 512, 512, requires_grad=True)
+    # torch_out = torch_model(x)
+
+    # Export the model
+    torch.onnx.export(model,  # model being run
+                      x,  # model input (or a tuple for multiple inputs)
+                      "test.onnx",  # where to save the model (can be a file or file-like object)
+                      export_params=True,  # store the trained parameter weights inside the model file
+                      opset_version=10,  # the ONNX version to export the model to
+                      do_constant_folding=True,  # whether to execute constant folding for optimization
+                      input_names=['input'],  # the model's input names
+                      output_names=['output'],  # the model's output names
+                      dynamic_axes={'input': {0: 'batch_size'},  # variable lenght axes
+                                    'output': {0: 'batch_size'}})
+
+
+
+    # return res
 
 
 if __name__ == "__main__":
-    args = default_argument_parser().parse_args()
-    print("soft link to {}".format(config.OUTPUT_DIR))
-    config.link_log()
+    args = test_argument_parser().parse_args()
     print("Command Line Args:", args)
     launch(
         main,

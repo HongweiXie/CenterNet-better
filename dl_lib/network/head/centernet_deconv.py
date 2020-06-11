@@ -14,17 +14,24 @@ class DeconvLayer(nn.Module):
         out_planes, deconv_kernel,
         deconv_stride=2, deconv_pad=1,
         deconv_out_pad=0, modulate_deform=True,
+            enable_dcn=True
     ):
         super(DeconvLayer, self).__init__()
-        if modulate_deform:
+        if modulate_deform and enable_dcn:
             self.dcn = ModulatedDeformConvWithOff(
                 in_planes, out_planes,
                 kernel_size=3, deformable_groups=1,
             )
-        else:
+        elif enable_dcn:
             self.dcn = DeformConvWithOff(
                 in_planes, out_planes,
                 kernel_size=3, deformable_groups=1,
+            )
+        else:
+            self.dcn = nn.Sequential(
+                nn.Conv2d(in_planes, in_planes, kernel_size=5, padding=2, groups=in_planes),
+                nn.ReLU(),
+                nn.Conv2d(in_planes, out_planes, kernel_size=3, padding=1)
             )
 
         self.dcn_bn = nn.BatchNorm2d(out_planes)
@@ -80,6 +87,7 @@ class SequentialUpsample(nn.Module):
                     in_channel, c,
                     deconv_kernel=k,
                     modulate_deform=modulate_deform,
+                    enable_dcn=cfg.MODEL.CENTERNET.ENABLE_DCN
                 )
             )
             in_channel = c

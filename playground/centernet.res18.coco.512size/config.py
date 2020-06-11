@@ -12,6 +12,7 @@ _config_dict = dict(
             DECONV_KERNEL=[4, 4, 4],
             NUM_CLASSES=80,
             MODULATE_DEFORM=True,
+            ENABLE_DCN=False,
             BIAS_VALUE=-2.19,
             DOWN_SCALE=4,
             MIN_OVERLAP=0.7,
