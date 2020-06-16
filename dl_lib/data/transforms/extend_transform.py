@@ -608,7 +608,8 @@ class BlendTransform(Transform):
     """
 
     def __init__(
-        self, src_image: np.ndarray, src_weight: float, dst_weight: float
+        self, src_image: np.ndarray, src_weight: float, dst_weight: float,
+            to_float=False
     ):
         """
         Blends the input image (dst_image) with the src_image using formula:
@@ -635,7 +636,7 @@ class BlendTransform(Transform):
         Returns:
             ndarray: blended image(s).
         """
-        if img.dtype == np.uint8:
+        if img.dtype == np.uint8 and not self.to_float:
             img = img.astype(np.float32)
             img = self.src_weight * self.src_image + self.dst_weight * img
             return np.clip(img, 0, 255).astype(np.uint8)

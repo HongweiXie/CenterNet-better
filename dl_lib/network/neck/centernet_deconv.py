@@ -5,7 +5,7 @@ import math
 import torch.nn as nn
 
 from dl_lib.layers import DeformConvWithOff, ModulatedDeformConvWithOff
-
+from dl_lib.builder import NECKS
 
 class DeconvLayer(nn.Module):
 
@@ -67,7 +67,7 @@ class DeconvLayer(nn.Module):
         for c in range(1, w.size(0)):
             w[c, 0, :, :] = w[0, 0, :, :]
 
-
+@NECKS.register_module()
 class SequentialUpsample(nn.Module):
     """
     The head used in CenterNet for object classification and box regression.
@@ -91,26 +91,11 @@ class SequentialUpsample(nn.Module):
                 )
             )
             in_channel = c
-        # self.deconv1 = DeconvLayer(
-        #     channels[0], channels[1],
-        #     deconv_kernel=deconv_kernel[0],
-        #     modulate_deform=modulate_deform,
-        # )
-        # self.deconv2 = DeconvLayer(
-        #     channels[1], channels[2],
-        #     deconv_kernel=deconv_kernel[1],
-        #     modulate_deform=modulate_deform,
-        # )
-        # self.deconv3 = DeconvLayer(
-        #     channels[2], channels[3],
-        #     deconv_kernel=deconv_kernel[2],
-        #     modulate_deform=modulate_deform,
-        # )
 
     def forward(self, x):
-        # x = self.deconv1(x)
-        # x = self.deconv2(x)
-        # x = self.deconv3(x)
         for layer in self.deconvs:
             x = layer(x)
         return x
+
+    def init_weights(self, pretrained=False):
+        pass

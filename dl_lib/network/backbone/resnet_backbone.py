@@ -5,6 +5,7 @@ import torch.nn as nn
 import torchvision.models.resnet as resnet
 
 from .backbone import Backbone
+from dl_lib.builder import BACKBONES
 
 _resnet_mapper = {
     18: resnet.resnet18,
@@ -13,9 +14,10 @@ _resnet_mapper = {
 }
 
 
+@BACKBONES.register_module()
 class ResNet(Backbone):
 
-    def __init__(self, cfg, input_shape=None, pretrained=True):
+    def __init__(self, cfg, pretrained=True):
         super().__init__()
         depth = cfg.MODEL.RESNETS.DEPTH
         backbone = _resnet_mapper[depth](pretrained=pretrained)
@@ -37,3 +39,6 @@ class ResNet(Backbone):
         x = self.stage3(x)
         x = self.stage4(x)
         return x
+
+    def init_weights(self, pretrained=False):
+        pass

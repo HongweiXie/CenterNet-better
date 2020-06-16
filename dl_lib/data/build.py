@@ -169,15 +169,10 @@ def print_instances_class_histogram(dataset_dicts, class_names):
     num_classes = len(class_names)
     hist_bins = np.arange(num_classes + 1)
     histogram = np.zeros((num_classes,), dtype=np.int)
-    min_cls = 100000
-    max_cls =0
     for entry in dataset_dicts:
         annos = entry["annotations"]
         classes = [x["category_id"] for x in annos if not x.get("iscrowd", 0)]
-        min_cls = min(min_cls, np.min(classes))
-        max_cls = max(max_cls, np.max(classes))
         histogram += np.histogram(classes, bins=hist_bins)[0]
-    print('cls range[{},{}]'.format(min_cls,max_cls))
     N_COLS = min(6, len(class_names) * 2)
 
     def short_name(x):

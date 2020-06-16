@@ -81,7 +81,7 @@ class DatasetEvaluators(DatasetEvaluator):
         return results
 
 
-def inference_on_dataset(model, data_loader, evaluator):
+def inference_on_dataset(model, data_loader, evaluator, data_encoder):
     """
     Run model on the data_loader and evaluate the metrics with evaluator.
     The model will be used in eval mode.
@@ -119,7 +119,11 @@ def inference_on_dataset(model, data_loader, evaluator):
                 total_compute_time = 0
 
             start_compute_time = time.time()
-            outputs = model(inputs)
+            if data_encoder is not None:
+                images, image_metas = data_encoder.encode(inputs, training=False)
+                outputs = model([images], [image_metas], return_loss=False)
+            else:
+                outputs = model(inputs)
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
             total_compute_time += time.time() - start_compute_time

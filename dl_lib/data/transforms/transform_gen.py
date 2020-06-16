@@ -30,6 +30,7 @@ __all__ = [
     "ResizeLongestEdge",
     "TransformGen",
     "apply_transform_gens",
+    'Normalize'
 ]
 
 
@@ -593,3 +594,38 @@ def apply_transform_gens(transform_gens, img):
         img = tfm.apply_image(img)
         tfms.append(tfm)
     return img, TransformList(tfms)
+
+
+class Normalize(TransformGen):
+    """
+    Normalize image.
+
+    image value range is in [0,255],
+    return (image/255-mean)/std
+
+    See: https://pillow.readthedocs.io/en/3.0.x/reference/ImageEnhance.html
+    """
+
+    def __init__(self, pixel_mean, pixel_std):
+        """
+        Args:
+            pixel_mean (list): mean
+            pixel_std (list): std
+        """
+        super().__init__()
+        self._init(locals())
+
+    def get_transform(self, img):
+        '''
+        src_weight * src_image + dst_weight * img
+        Args:
+            img:
+
+        Returns:
+
+        '''
+        w_dst=1./(np.asarray(self.pixel_std)*255.)
+        w_src=-1/np.asarray(self.pixel_std)
+        return BlendTransform(src_image=np.asarray(self.pixel_mean),
+                              src_weight=w_src, dst_weight=w_dst,
+                              to_float=True)

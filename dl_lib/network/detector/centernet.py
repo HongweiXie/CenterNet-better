@@ -7,8 +7,8 @@ import torch.nn as nn
 from dl_lib.layers import ShapeSpec
 from dl_lib.structures import Boxes, ImageList, Instances
 
-from .generator import CenterNetDecoder, CenterNetGT
-from .loss import modified_focal_loss, reg_l1_loss
+from dl_lib.network.generator import CenterNetDecoder, CenterNetGT
+from dl_lib.network.loss import modified_focal_loss, reg_l1_loss
 
 
 class CenterNet(nn.Module):

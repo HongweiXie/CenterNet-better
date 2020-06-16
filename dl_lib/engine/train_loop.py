@@ -172,13 +172,14 @@ class SimpleTrainer(TrainerBase):
     or write your own training loop.
     """
 
-    def __init__(self, model, data_loader, optimizer):
+    def __init__(self, model, data_loader, optimizer, annotation_encoder=None):
         """
         Args:
             model: a torch Module. Takes a data from data_loader and returns a
                 dict of losses.
             data_loader: an iterable. Contains data to be used to call model.
             optimizer: a torch optimizer.
+            annotation_encoder: encode annotations for network
         """
         super().__init__()
 
@@ -194,6 +195,7 @@ class SimpleTrainer(TrainerBase):
         self.data_loader = data_loader
         self._data_loader_iter = iter(data_loader)
         self.optimizer = optimizer
+        self.annotation_encoder = annotation_encoder
 
     def run_step(self):
         """
@@ -210,7 +212,11 @@ class SimpleTrainer(TrainerBase):
         """
         If your want to do something with the losses, you can wrap the model.
         """
-        loss_dict = self.model(data)
+        if self.annotation_encoder is not None:
+            images, image_metas, gt_dict = self.annotation_encoder.encode(data,training=True)
+            loss_dict = self.model(images, image_metas, gt_dict=gt_dict)
+        else:
+            loss_dict = self.model(data)
         losses = sum(loss for loss in loss_dict.values())
         self._detect_anomaly(losses, loss_dict)
 

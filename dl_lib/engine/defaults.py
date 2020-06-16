@@ -51,6 +51,7 @@ def default_argument_parser():
         argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description="dl_lib Training")
+    parser.add_argument('config', help='train config file path')
     parser.add_argument(
         "--resume",
         action="store_true",
@@ -229,7 +230,7 @@ class DefaultTrainer(SimpleTrainer):
         trainer.train()
     """
 
-    def __init__(self, cfg, model):
+    def __init__(self, cfg, model, encoder):
         """
         Args:
             cfg (CfgNode):
@@ -243,7 +244,7 @@ class DefaultTrainer(SimpleTrainer):
             model = DistributedDataParallel(
                 model, device_ids=[comm.get_local_rank()], broadcast_buffers=False
             )
-        super().__init__(model, data_loader, optimizer)
+        super().__init__(model, data_loader, optimizer, encoder)
 
         self.scheduler = self.build_lr_scheduler(cfg.SOLVER.LR_SCHEDULER, optimizer)
         # Assume no other objects need to be checkpointed.
@@ -415,7 +416,7 @@ class DefaultTrainer(SimpleTrainer):
         )
 
     @classmethod
-    def test(cls, cfg, model, evaluators=None):
+    def test(cls, cfg, model, evaluators=None, data_encoder=None):
         """
         Args:
             cfg (CfgNode):
@@ -452,7 +453,7 @@ class DefaultTrainer(SimpleTrainer):
                     )
                     results[dataset_name] = {}
                     continue
-            results_i = inference_on_dataset(model, data_loader, evaluator)
+            results_i = inference_on_dataset(model, data_loader, evaluator, data_encoder)
             results[dataset_name] = results_i
             if comm.is_main_process():
                 assert isinstance(

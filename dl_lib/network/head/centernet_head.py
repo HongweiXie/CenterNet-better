@@ -3,6 +3,11 @@
 import torch
 import torch.nn as nn
 
+from dl_lib.builder import HEADS
+from dl_lib.network.loss import modified_focal_loss, reg_l1_loss
+from dl_lib.network.generator import CenterNetDecoder
+from dl_lib.structures import Boxes
+
 
 class SingleHead(nn.Module):
 
@@ -20,7 +25,7 @@ class SingleHead(nn.Module):
         x = self.out_conv(x)
         return x
 
-
+@HEADS.register_module()
 class CenterNetDetectionHead(nn.Module):
     """
     The head used in CenterNet for object classification and box regression.
@@ -28,6 +33,7 @@ class CenterNetDetectionHead(nn.Module):
     """
     def __init__(self, cfg):
         super(CenterNetDetectionHead, self).__init__()
+        self.cfg = cfg
         self.cls_head = SingleHead(
             64,
             cfg.MODEL.CENTERNET.NUM_CLASSES,
@@ -48,3 +54,55 @@ class CenterNetDetectionHead(nn.Module):
             'reg': reg
         }
         return pred
+
+    def init_weights(self, pretrained=False):
+        pass
+
+    def loss(self, pred_dict, gt_dict):
+        pred_score = pred_dict['cls']
+        cur_device = pred_score.device
+        for k in gt_dict:
+            gt_dict[k] = gt_dict[k].to(cur_device)
+
+        loss_cls = modified_focal_loss(pred_score, gt_dict['score_map'])
+
+        mask = gt_dict['reg_mask']
+        index = gt_dict['index']
+        index = index.to(torch.long)
+        # width and height loss, better version
+        loss_wh = reg_l1_loss(pred_dict['wh'], mask, index, gt_dict['wh'])
+
+        # regression loss
+        loss_reg = reg_l1_loss(pred_dict['reg'], mask, index, gt_dict['reg'])
+
+        loss_cls *= self.cfg.MODEL.LOSS.CLS_WEIGHT
+        loss_wh *= self.cfg.MODEL.LOSS.WH_WEIGHT
+        loss_reg *= self.cfg.MODEL.LOSS.REG_WEIGHT
+
+        loss = {
+            "loss_cls": loss_cls,
+            "loss_box_wh": loss_wh,
+            "loss_center_reg": loss_reg,
+        }
+        # print(loss)
+        return loss
+
+    def get_bboxes(self, pred_dict, img_info):
+        """
+        Args:
+            pred_dict(dict): a dict contains all information of prediction
+            img_info(dict): a dict contains needed information of origin image
+        """
+        fmap = pred_dict["cls"]
+        reg = pred_dict["reg"]
+        wh = pred_dict["wh"]
+
+        boxes, scores, classes = CenterNetDecoder.decode(fmap, wh, reg)
+        # boxes = Boxes(boxes.reshape(boxes.shape[-2:]))
+        scores = scores.reshape(-1)
+        classes = classes.reshape(-1).to(torch.int64)
+
+        # dets = CenterNetDecoder.decode(fmap, wh, reg)
+        boxes = CenterNetDecoder.transform_boxes(boxes, img_info)
+        boxes = Boxes(boxes)
+        return dict(pred_boxes=boxes, scores=scores, pred_classes=classes)

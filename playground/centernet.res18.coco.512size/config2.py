@@ -1,5 +1,5 @@
 import os.path as osp
-from dl_lib.configs.base_detection_config import BaseDetectionConfig
+from dl_lib.configs import BaseDetectionConfig
 
 _config_dict = dict(
     MODEL=dict(
@@ -36,6 +36,7 @@ _config_dict = dict(
                 ('RandomContrast', dict(intensity_min=0.6, intensity_max=1.4)),
                 ('RandomSaturation', dict(intensity_min=0.6, intensity_max=1.4)),
                 ('RandomLighting', dict(scale=0.1)),
+                ('Normalize', dict(pixel_mean=[0.485, 0.456, 0.406], pixel_std=[0.229, 0.224, 0.225]))
             ],
             TEST_PIPELINES=[
             ],
@@ -68,7 +69,6 @@ _config_dict = dict(
     GLOBAL=dict(DUMP_TEST=False)
 )
 
-
 class CenterNetConfig(BaseDetectionConfig):
     def __init__(self):
         super(CenterNetConfig, self).__init__()
@@ -76,3 +76,28 @@ class CenterNetConfig(BaseDetectionConfig):
 
 
 config = CenterNetConfig()
+
+encoder =dict(
+    type='CenterNetDetectionEncoder',
+    cfg = config
+)
+
+detector = dict(
+    type='CenterNetDetection',
+    cfg=config,
+    backbone=dict(
+        type='ResNet',
+        cfg=config,
+        pretrained=True),
+
+    neck=dict(
+        type='SequentialUpsample',
+        cfg=config),
+
+    bbox_head=dict(
+        type='CenterNetDetectionHead',
+        cfg=config
+    )
+)
+
+
