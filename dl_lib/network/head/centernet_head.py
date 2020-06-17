@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from dl_lib.builder import HEADS
 from dl_lib.network.loss import modified_focal_loss, reg_l1_loss
-from dl_lib.network.generator import CenterNetDecoder
+from dl_lib.network.generator import CenterNetDecoder, CenterNetGT
 from dl_lib.structures import Boxes
 
 
@@ -58,7 +58,12 @@ class CenterNetDetectionHead(nn.Module):
     def init_weights(self, pretrained=False):
         pass
 
-    def loss(self, pred_dict, gt_dict):
+    @torch.no_grad()
+    def get_ground_truth(self, annotations):
+        return CenterNetGT.generate(self.cfg, annotations)
+
+    def loss(self, pred_dict, annotations):
+        gt_dict = self.get_ground_truth(annotations)
         pred_score = pred_dict['cls']
         cur_device = pred_score.device
         for k in gt_dict:

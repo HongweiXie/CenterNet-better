@@ -45,8 +45,7 @@ class SingleStageDetector(BaseDetector):
         """Directly extract features from the backbone+neck
         """
         x = self.backbone(img)
-        if self.with_neck:
-            x = self.neck(x)
+        x = self.neck(x)
         return x
 
     def forward_dummy(self, img):

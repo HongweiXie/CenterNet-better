@@ -230,7 +230,7 @@ class DefaultTrainer(SimpleTrainer):
         trainer.train()
     """
 
-    def __init__(self, cfg, model, encoder):
+    def __init__(self, cfg, model, encoder=None):
         """
         Args:
             cfg (CfgNode):

@@ -3,6 +3,8 @@ import math
 import numpy as np
 from dl_lib.structures import Instances
 from dl_lib.builder import DETECTORS
+from dl_lib.structures import ImageList
+from dl_lib.network.generator import CenterNetGT
 from .single_stage import SingleStageDetector
 
 @DETECTORS.register_module()
@@ -21,6 +23,10 @@ class CenterNetDetection(SingleStageDetector):
         self.cfg = cfg
         self.device = torch.device(cfg.MODEL.DEVICE)
         self.to(self.device)
+        self.mean, self.std = cfg.MODEL.PIXEL_MEAN, cfg.MODEL.PIXEL_STD
+        pixel_mean = torch.Tensor(self.mean).to(self.device).view(3, 1, 1)
+        pixel_std = torch.Tensor(self.std).to(self.device).view(3, 1, 1)
+        self.normalizer = lambda x: (x - pixel_mean) / pixel_std
 
     def forward_train(self,
                       img,
@@ -41,7 +47,7 @@ class CenterNetDetection(SingleStageDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components.
         """
-        x = self.extract_feat(img.to(self.device))
+        x = self.extract_feat(img)
         outs = self.bbox_head(x)
         losses = self.bbox_head.loss(outs, gt_dict)
         return losses

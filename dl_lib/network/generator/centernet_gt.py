@@ -50,6 +50,13 @@ class CenterNetGT(object):
             )
             gt_wh[:num_boxes] = wh
 
+            # if device is not None:
+            #     gt_scoremap=gt_scoremap.to(device)
+            #     gt_wh=gt_wh.to(device)
+            #     gt_reg=gt_reg.to(device)
+            #     reg_mask=reg_mask.to(device)
+            #     gt_index=gt_index.to(device)
+
             scoremap_list.append(gt_scoremap)
             wh_list.append(gt_wh)
             reg_list.append(gt_reg)

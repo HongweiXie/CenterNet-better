@@ -27,37 +27,44 @@ class AnnotationEncoder(metaclass=ABCMeta):
 
 @ENCODERS.register_module()
 class CenterNetDetectionEncoder(AnnotationEncoder):
+    def __init__(self, cfg):
+        super(CenterNetDetectionEncoder, self).__init__(cfg)
+        self.mean, self.std = cfg.MODEL.PIXEL_MEAN, cfg.MODEL.PIXEL_STD
+        pixel_mean = torch.Tensor(self.mean).to(self.device).view(3, 1, 1)
+        pixel_std = torch.Tensor(self.std).to(self.device).view(3, 1, 1)
+        self.normalizer = lambda x: (x - pixel_mean) / pixel_std
+
     def encode_train(self,data):
         image_tensor=[]
         image_metas=[]
+        annotations=[]
         for item in data:
-            image_tensor.append(item['image'])
+            image_tensor.append(item['image'].to(self.device))
             image_meta={}
             for k in item.keys():
                 if k !='image' and k!='instances':
                     image_meta[k]=item[k]
             image_metas.append(image_meta)
-        gt_dict = CenterNetGT.generate(self.cfg, data)
+            annotations.append({'instances':item['instances']})
+        # gt_dict = CenterNetGT.generate(self.cfg, data)
         image_tensor = torch.stack(image_tensor, dim=0)
-        return image_tensor, image_metas, gt_dict
+        image_tensor = self.normalizer(image_tensor)
+        return image_tensor, image_metas, annotations
 
     def encode_test(self, data):
 
         mean, std = self.cfg.MODEL.PIXEL_MEAN, self.cfg.MODEL.PIXEL_STD
         image_tensor = []
-        image_metas = []
+        # image_metas = []
         for item in data:
-            image_tensor.append(item['image'])
-            image_meta = {}
-            for k in item.keys():
-                if k != 'image' and k != 'instances':
-                    image_meta[k] = item[k]
-            image_metas.append(image_meta)
+            image_tensor.append(item['image'].to(self.device))
+            # image_meta = {}
+            # for k in item.keys():
+            #     if k != 'image' and k != 'instances':
+            #         image_meta[k] = item[k]
+            # image_metas.append(image_meta)
         images = torch.stack(image_tensor, dim=0)
-        pixel_mean = torch.Tensor(mean).to(self.device).view(3, 1, 1)
-        pixel_std = torch.Tensor(std).to(self.device).view(3, 1, 1)
-        images = images.to(self.device)
-        images = (images/255.-pixel_mean)/pixel_std
+        images = self.normalizer(images)
         n, c, h, w = images.shape
         new_h, new_w = (h | 31) + 1, (w | 31) + 1
         center_wh = np.array([w // 2, h // 2], dtype=np.float32)

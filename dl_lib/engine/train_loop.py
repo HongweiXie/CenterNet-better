@@ -215,6 +215,7 @@ class SimpleTrainer(TrainerBase):
         if self.annotation_encoder is not None:
             images, image_metas, gt_dict = self.annotation_encoder.encode(data,training=True)
             loss_dict = self.model(images, image_metas, gt_dict=gt_dict)
+            # loss_dict = self.model(data, None, gt_dict=None)
         else:
             loss_dict = self.model(data)
         losses = sum(loss for loss in loss_dict.values())
