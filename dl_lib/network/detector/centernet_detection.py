@@ -47,10 +47,10 @@ class CenterNetDetection(SingleStageDetector):
         Returns:
             dict[str, Tensor]: A dictionary of loss components.
         """
-        x = self.preprocess_image(img)
-        x = self.extract_feat(x.tensor)
+        # x = self.preprocess_image(img)
+        x = self.extract_feat(img)
         outs = self.bbox_head(x)
-        losses = self.bbox_head.loss(outs, img)
+        losses = self.bbox_head.loss(outs, gt_dict)
         return losses
 
     def simple_test(self, images, img_metas, rescale=False):
@@ -61,12 +61,12 @@ class CenterNetDetection(SingleStageDetector):
         det_instance = Instances((int(ori_h), int(ori_w)), **results)
         return [{"instances": det_instance}]
 
-    def preprocess_image(self, batched_inputs):
-        """
-        Normalize, pad and batch the input images.
-        """
-        images = [x["image"].to(self.device) for x in batched_inputs]
-        images = [self.normalizer(img / 255) for img in images]
-        images = ImageList.from_tensors(images, self.backbone.size_divisibility)
-        return images
+    # def preprocess_image(self, batched_inputs):
+    #     """
+    #     Normalize, pad and batch the input images.
+    #     """
+    #     images = [x["image"].to(self.device) for x in batched_inputs]
+    #     images = [self.normalizer(img / 255) for img in images]
+    #     images = ImageList.from_tensors(images, self.backbone.size_divisibility)
+    #     return images
 
