@@ -6,8 +6,6 @@ import numpy as np
 import torch.nn as nn
 from mmcv.utils import print_log
 
-from mmdet.core import auto_fp16
-
 
 class BaseDetector(nn.Module, metaclass=ABCMeta):
     """Base class for detectors"""
@@ -133,7 +131,6 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
             assert 'proposals' not in kwargs
             return self.aug_test(imgs, img_metas, **kwargs)
 
-    @auto_fp16(apply_to=('img', ))
     def forward(self, img, img_metas, return_loss=True, **kwargs):
         """
         Calls either forward_train or forward_test depending on whether

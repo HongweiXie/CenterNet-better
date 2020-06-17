@@ -51,7 +51,7 @@ def default_argument_parser():
         argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(description="dl_lib Training")
-    parser.add_argument('config', help='train config file path')
+    parser.add_argument('--config', help='train config file path')
     parser.add_argument(
         "--resume",
         action="store_true",
