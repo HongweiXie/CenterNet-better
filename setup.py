@@ -91,6 +91,7 @@ setup(
         "pycocotools",
         "easydict",
         "imagesize",
+        "prefetch_generator"
     ],
     extras_require={"all": ["shapely", "psutil"]},
     ext_modules=get_extensions(),

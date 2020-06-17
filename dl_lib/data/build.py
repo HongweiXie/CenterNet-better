@@ -290,6 +290,12 @@ def get_detection_dataset_dicts(
             pass
     return dataset_dicts
 
+from torch.utils.data import DataLoader
+from prefetch_generator import BackgroundGenerator
+class DataLoaderX(DataLoader):
+
+    def __iter__(self):
+        return BackgroundGenerator(super().__iter__())
 
 def build_detection_train_loader(cfg, mapper=None):
     r"""
@@ -358,7 +364,7 @@ def build_detection_train_loader(cfg, mapper=None):
         sampler, images_per_worker, group_bin_edges, aspect_ratios
     )
 
-    data_loader = torch.utils.data.DataLoader(
+    data_loader = DataLoaderX(
         dataset,
         num_workers=cfg.DATALOADER.NUM_WORKERS,
         batch_sampler=batch_sampler,
