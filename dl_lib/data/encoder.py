@@ -53,7 +53,7 @@ class CenterNetDetectionEncoder(AnnotationEncoder):
 
     def encode_test(self, data):
 
-        mean, std = self.cfg.MODEL.PIXEL_MEAN, self.cfg.MODEL.PIXEL_STD
+        # mean, std = self.cfg.MODEL.PIXEL_MEAN, self.cfg.MODEL.PIXEL_STD
         image_tensor = []
         # image_metas = []
         for item in data:
@@ -64,7 +64,7 @@ class CenterNetDetectionEncoder(AnnotationEncoder):
             #         image_meta[k] = item[k]
             # image_metas.append(image_meta)
         images = torch.stack(image_tensor, dim=0)
-        images = self.normalizer(images)
+        images = self.normalizer(images/255.)
         n, c, h, w = images.shape
         new_h, new_w = (h | 31) + 1, (w | 31) + 1
         center_wh = np.array([w // 2, h // 2], dtype=np.float32)
@@ -74,7 +74,7 @@ class CenterNetDetectionEncoder(AnnotationEncoder):
                         height=new_h // down_scale,
                         width=new_w // down_scale)
 
-        pad_value = [-x / y for x, y in zip(mean, std)]
+        pad_value = [-x / y for x, y in zip(self.mean, self.std)]
         aligned_img = torch.Tensor(pad_value).reshape((1, -1, 1, 1)).expand(n, c, new_h, new_w)
         aligned_img = aligned_img.to(images.device)
 
